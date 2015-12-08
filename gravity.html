@@ -1,0 +1,403 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+   
+<meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+
+ <title> Gravity Test </title>
+ 
+ <style type = "text/css">
+    
+    * {
+         -webkit-user-select: none;
+         -khtml-user-select: none;
+         -moz-user-select: none;
+         -ms-user-select: none;
+         -o-user-select: none;
+         user-select: none;
+}
+    
+    body{
+        background-color: #000;
+        margin: 0 auto;
+        display: block;
+    }
+    
+    #galaxyCanvas{
+        width: 1024px;
+        height: 768px;
+    }
+    
+ </style>
+ 
+ <script type = "text/javascript">
+    
+    //make new array with larger attractor particles
+    //when distance <= 3 combine 2 particles masses and location = location of particle 1
+    //or splice into array?
+    
+    var canvas;
+    var ctx;
+    
+    var width;
+    var height;
+    
+    var mouseX;
+    var mouseY;
+    
+    var velocityMax = 1;
+    
+    var runCount = 0;
+    
+    var combination = false;
+    
+    var particleArray = new Array();
+    
+    var scaleAmount = 1;
+    //var particleCount = 0;
+    
+    function init()
+    {
+        canvas = document.getElementById('galaxyCanvas');
+        ctx = canvas.getContext('2d');
+            
+        width = canvas.width;
+        height = canvas.height;
+        
+        canvas.addEventListener('click', runParticleCreation, false);
+        canvas.addEventListener('mousemove', determineMousePosition, false);
+        
+        ctx.save();
+        
+        setInterval(runGravity, 1);
+    }
+    
+    function runParticleCreation()
+    {
+        
+        //console.log("x = " + mouseX);
+        //console.log("y = " + mouseY);
+        
+        particleArray.push(new createParticle(mouseX, mouseY));
+    }
+    
+    function createParticle(x, y)
+    {
+        //console.log('createParticle');
+        
+        this.prevVelocityX = 0;
+        this.prevVelocityY = 0;
+        this.velocityX = 0;
+        this.velocityY = 0;
+        this.mass = 0.5;
+        this.locationX = x;
+        this.locationY = y;
+        this.rVal = 255;
+        this.gVal = 255;
+        this.bVal = 255;
+        this.accelerationX = 0;
+        this.accelerationY = 0;
+        this.particleGravityForceX = 0;
+        this.particleGravityForceY = 0;
+    }
+    
+    
+    function makeNewParticle(x,y, mass1, mass2, veloX1, veloX2, veloY1, veloY2)
+    {
+      console.log("makeNewParticle");
+      
+        this.prevVelocityX = 0;
+        this.prevVelocityY = 0;
+        this.mass = (mass1 + mass2)/1.8;
+        this.velocityX = (veloX1 + veloX2)/this.mass;
+        this.velocityY = (veloY1 + veloY2)/this.mass;
+       // this.mass = (mass1 + mass2);
+        this.locationX = x;
+        this.locationY = y;
+        this.rVal = 255;
+        this.gVal = 255;
+        this.bVal = 255;
+        this.accelerationX = 0;
+        this.accelerationY = 0;
+        this.particleGravityForceX = 0;
+        this.particleGravityForceY = 0;
+    }
+    
+    function runGravity()
+    {
+      //console.log('runGravity');
+      //console.log(particleArray.length);
+      ctx.clearRect(0,0, width, height);
+          
+        for(var i = 0; i<particleArray.length; i++)
+        {
+            
+            //console.log(particleArray[i].locationX);
+            //console.log(particleArray[i].velocityX);
+            
+            for(var j = 0; j<particleArray.length; j++)
+            {
+                if(j != i)
+                {
+                    findGravityForce(i,j);
+                }
+            }
+            
+            if(combination == false)
+            {
+               getVelocity(i);
+               updateLocation(i);
+               drawParticle(i);
+            }
+            
+            if(combination == true)
+            {
+               i = 0;
+            }
+            
+            //runCount++;
+            combination = false;
+        }
+    }
+    
+    function findGravityForce(particle1, particle2)
+    {
+        //console.log('particle1 = ' + particle1);
+       
+        var gravityForceX = 0;
+        var gravityForceY = 0;
+        
+        //console.log(particleArray[particle1].locationX);
+        var xMag = particleArray[particle2].locationX - particleArray[particle1].locationX;
+        var yMag = particleArray[particle2].locationY - particleArray[particle1].locationY;
+        
+        var xPos = false;
+        var yPos = false;
+        
+        if(xMag > 0)
+        {
+            xPos = true;
+        }
+        if(yMag > 0)
+        {
+            yPos = true;
+        }
+        
+        xMag = Math.abs(xMag);
+        yMag = Math.abs(yMag);
+        //var totalMag = 1;
+        
+        //distance between the two points
+        var distance = Math.sqrt(Math.pow(xMag,2) + Math.pow(yMag,2));
+        
+        if(distance <= particleArray[particle1].mass)
+        {
+           // particleArray.push(new makeNewParticle(particleArray[particle1].locationX, particleArray[particle1].locationY,
+            //      particleArray[particle1].mass, particleArray[particle2].mass, particleArray[particle1].velocityX,
+             //     particleArray[particle2].velocityX, particleArray[particle1].velocityY, particleArray[particle2].velocityY));
+            
+            particleArray[particle1].mass = particleArray[particle1].mass + particleArray[particle2].mass;
+            
+            //particleArray.splice(particle1, 1);
+            particleArray.splice(particle2, 1);
+         
+            combination = true;
+            //particleArray[particle1].velocityX = particleArray[particle1].velocityX + particleArray[particle2].velocityX;
+            //particleArray[particle1].velocityY = particleArray[particle1].velocityY + particleArray[particle2].velocityY;
+        }
+        
+        else
+        {
+         //console.log(distance);
+        
+         //next finding the angle between the two points
+         var angle = Math.atan(yMag/xMag);
+        
+         var cosAngle = Math.cos(angle);
+         var sinAngle = Math.sin(angle);
+        
+         //xMag = cosAngle;
+         //yMag = sinAngle;
+        
+         //console.log("x = " + xMag);
+         //console.log("y = " + yMag);
+        
+         var gravityForce = 0.006674 * ((particleArray[particle1].mass * particleArray[particle2].mass)/Math.pow(distance,2));
+        
+        //console.log(gravityForce);
+         if(gravityForce > 0.4)
+         {
+           gravityForce = 0.4;
+         }
+        
+          gravityForce = gravityForce/particleArray[particle1].mass;
+          
+          gravityForceX = cosAngle * gravityForce;
+          gravityForceY = sinAngle * gravityForce;
+          
+          if(xPos == false)
+          {
+              gravityForceX = gravityForceX * -1;
+          }
+          if(yPos == false)
+          {
+              gravityForceY = gravityForceY * -1;
+          }
+        
+          //gravityForceX = 0.006674*((particleArray[particle1].mass * particleArray[particle2].mass)/(xMag^2));
+          //gravityForceY = 0.006674*((particleArray[particle1].mass * particleArray[particle2].mass)/(yMag^2));
+        
+          //console.log(gravityForceX);
+          //console.log(gravityForceY);
+        
+          particleArray[particle1].particleGravityForceX = particleArray[particle1].particleGravityForceX + gravityForceX;
+          particleArray[particle1].particleGravityForceY = particleArray[particle1].particleGravityForceY + gravityForceY;
+        }
+        //console.log(particleArray[particle1].particleGravityForceX);
+        
+    }
+    
+    function getVelocity(particleNumber)
+    {
+        particleArray[particleNumber].accelerationX = particleArray[particleNumber].particleGravityForceX;
+        particleArray[particleNumber].accelerationY = particleArray[particleNumber].particleGravityForceY;
+        
+        particleArray[particleNumber].velocityX = 0;
+        particleArray[particleNumber].velocityY = 0;
+        
+        particleArray[particleNumber].velocityX = particleArray[particleNumber].velocityX + particleArray[particleNumber].accelerationX;
+        particleArray[particleNumber].velocityY = particleArray[particleNumber].velocityY + particleArray[particleNumber].accelerationY;
+        
+        //console.log(particleArray[particleNumber].velocityX);
+        
+        /*
+        if(Math.abs(particleArray[particleNumber].velocityX) > velocityMax)
+        {
+            particleArray[particleNumber].velocityX = velocityMax;
+        }
+        
+        if(Math.abs(particleArray[particleNumber].velocityY) > velocityMax)
+        {
+            particleArray[particleNumber].velocityY = velocityMax;
+        }
+        */
+    }
+    
+    function updateLocation(particleNumber)
+    {
+      //console.log(particleArray[particleNumber].locationX);
+      
+      particleArray[particleNumber].locationX = particleArray[particleNumber].locationX + particleArray[particleNumber].velocityX;
+      particleArray[particleNumber].locationY = particleArray[particleNumber].locationY + particleArray[particleNumber].velocityY;
+    }
+    
+    function drawParticle(particleNumber)
+    {
+        //console.log('draw'+ particleNumber);
+        //console.log(particleArray[particleNumber].locationX);
+        ctx.fillStyle = "rgb(255, 255, 255)";
+        //ctx.lineWidth = 2;
+        //ctx.strokeStyle = "rgb(255, 255, 255)"
+        //ctx.fillStyle = "rgb(" + particleArray[particleNumber].rVal + "," + particleArray[particleNumber].gVal + "," + particleArray[particleNumber].bVal + ")";
+        ctx.beginPath();
+        ctx.arc(particleArray[particleNumber].locationX, particleArray[particleNumber].locationY, (particleArray[particleNumber].mass*scaleAmount), 0, Math.PI*2, true);
+        ctx.closePath();
+        ctx.fill();
+        
+        //ctx.fillRect(particleArray[particleNumber].locationX, particleArray[particleNumber].locationY, 2, 2);
+        //ctx.beginPath();
+        //ctx.moveTo(particleArray[particleNumber].locationX, particleArray[particleNumber].locationY);
+        //ctx.lineTo(particleArray[particleNumber].locationX, particleArray[particleNumber].locationY);
+        //ctx.stroke();
+        //ctx.closePath();
+    }
+    
+    function newScale(scaleVal)
+    {
+    ctx.scale(scaleVal,scaleVal);
+    transformAmount(scaleVal);
+    ctx.clearRect(0,0, width, height);
+    }
+    
+    function transformAmount(scaleVal)
+    {
+      if(scaleVal == 2.0)
+      {
+         ctx.restore();
+         ctx.transform(-1*width + (width/2), -1*height + (height/2))
+      }
+      
+      if(scaleVal == 1.5)
+      {
+         ctx.restore();
+         ctx.transform((-1*(0.66*width)) + (width/2), (-1*(0.66*height)) + (height/2)); 
+      }
+      
+      if(scaleVal == 1.0)
+      {
+         ctx.restore();
+      }
+          
+    }
+    
+    function findOffset(obj)
+    {
+        var curX = curY = 0;
+        
+            if (obj.offsetParent)
+            {   
+               do
+               {
+                   curX += obj.offsetLeft;  //get left position of the obj and add it to the var.
+                   curY += obj.offsetTop;   //gets top position and add it to the var.
+               }
+               while (obj = obj.offsetParent);  
+        
+        return {x:curX, y:curY};  //this is a function that returns two values
+	}
+    }
+    
+    function determineMousePosition(e)
+    {  
+        var offset = findOffset(canvas);   //get the offset of the canvas relative to the page
+    
+        mouseX = e.pageX - offset.x;     //find the x position of the mouse
+        mouseY = e.pageY - offset.y;     //find the y position of the mouse
+    }
+    
+    
+ </script>
+    
+<body onload = "init()">
+    
+    <canvas id= "galaxyCanvas" width = "1024px" height = "768px">
+    </canvas>
+    
+    <div id = "twohundred" onclick = "newScale(2.0)">
+      200%
+    </div>
+    
+    <div id = "onehundredfifty" onclick = "newScale(1.5)">
+      150%
+    </div>
+    
+    <div id = "onehundred" onclick = "newScale(1.0)">
+      100%
+    </div>
+    
+    <div id = "fifty" onclick = "newScale(0.5)">
+      50%
+    </div>
+    
+    <div id = "twentyfive" onclick = "newScale(0.25)">
+      25%
+    </div>
+    
+    <div id = "ten" onclick = "newScale(0.1)">
+      10%
+    </div>
+    
+</body>
+</head>
+</html>
